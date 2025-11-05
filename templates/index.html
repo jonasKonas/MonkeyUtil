@@ -3,57 +3,63 @@
 {% block content %}
 
 <div class="container py-5">
-  <div class="row justify-content-center">
-    <div class="col-lg-8 text-center">
-      <!-- <p class="lead mb-4">
-        A practical Check Point API command generator for bulk operations. More tools will be added soon.
-      </p> -->
+    <div class="row justify-content-center">
+        <div class="col-lg-10 text-center">
 
-      
-      <!-- Main Links -->
-      <!-- <div class="d-grid gap-2 d-sm-flex justify-content-sm-center mt-4 mb-5">
-        <a href="https://sc1.checkpoint.com/documents/latest/APIs/#~v2%20" target="_blank" class="btn btn-primary btn-lg px-4 gap-3">
-          CP API Reference
-        </a>
-        <a href="https://github.com/jonasKonas/CP_Bulk_API_Generator" target="_blank" class="btn btn-outline-secondary btn-lg px-4">
-          GitHub Repo
-        </a>
-      </div> -->
+            <h3 class="mb-4 mt-5">Check Point Tools</h3>
+            <hr>
+            <div class="row row-cols-1 row-cols-md-3 g-4">
+                
+                <div class="col">
+                    <div class="card h-100 border-primary">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">Add Host Objects</h5>
+                            <p class="card-text">Generate API commands for adding new IP-based Host objects to groups.</p>
+                            <a href="{{ url_for('add_host_api') }}" class="btn btn-primary">Go</a>
+                        </div>
+                    </div>
+                </div>
 
-      <!-- Tool List -->
-      <h3 class="mb-4 mt-5">Available Tools</h3>
-      <div class="row row-cols-1 row-cols-md-2 g-4">
-        <div class="col">
-          <div class="card h-100 border-primary">
-            <div class="card-body text-center">
-              <h5 class="card-title">Add Hosts / DNS objects</h5>
-              <p class="card-text">Generate API commands for adding new hosts or DNS domain objects to groups.</p>
-              <a href="{{ url_for('add_host_api') }}" class="btn btn-primary">Go</a>
+                <div class="col">
+                    <div class="card h-100 border-primary">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">Add DNS Domain Objects</h5>
+                            <p class="card-text">Generate API commands for adding new DNS Domain objects (must start with '.') to groups.</p>
+                            <a href="{{ url_for('add_dns_domain_api') }}" class="btn btn-primary">Go</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col">
+                    <div class="card h-100 border-primary">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">Policy Review - TESTING</h5>
+                            <p class="card-text">Review your Check Point Policy by uploading CSV file from SmartConsole</p>
+                            <a href="{{ url_for('policy_review') }}" class="btn btn-primary">Go</a>
+                        </div>
+                    </div>
+                </div>
+                
             </div>
-          </div>
+            
+            <h3 class="mb-4 mt-5">Other Vendor Tools</h3>
+            <hr>
+            <div class="row row-cols-1 row-cols-md-3 g-4">
+
+                <div class="col">
+                    <div class="card h-100 border-secondary">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">Palo Alto Tool (Coming Soon)</h5>
+                            <p class="card-text">Tools for managing Palo Alto firewall configurations and objects.</p>
+                            <a href="#" class="btn btn-secondary disabled">Disabled</a>
+                        </div>
+                    </div>
+                </div>
+                
+                </div>
+            
         </div>
-        <div class="col">
-          <div class="card h-100 border-primary">
-            <div class="card-body text-center">
-              <h5 class="card-title">Policy Review - TESTING</h5>
-              <p class="card-text">Review your Check Point Policy by uploading CSV file from SmartConsole</p>
-              <a href="{{ url_for('policy_review') }}" class="btn btn-primary">Go</a>
-            </div>
-          </div>
-        </div>
-        <!-- <div class="col">
-          <div class="card h-100 border-secondary">
-            <div class="card-body text-center">
-              <h5 class="card-title">Coming Soon...</h5>
-              <p class="card-text">More tools will be added here soon!</p>
-              <button class="btn btn-secondary" disabled>Coming Soon</button>
-            </div>
-          </div> -->
-        </div>
-      </div>
     </div>
-  </div>
 </div>
-
 
 {% endblock %}
