@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>Add **Host** Objects (IP Addresses)</h2>
+<h2>Add Host Objects (IP Addresses)</h2>
 <form method="post" class="mb-4">
     <div class="mb-3">
         <label for="ticket_ref" class="form-label">Ticket Ref</label>
@@ -15,15 +15,15 @@
 
     <div class="mb-3">
         <label for="input_data" class="form-label">
-            Input Data (IP per line, or name**,**IP per line)
+            Input Data (IP per line, or name and IP per line)
         </label>
         <textarea class="form-control" id="input_data" name="input_data" required
             placeholder="192.168.1.10 or webserver1,10.0.0.5"></textarea>
         <div class="form-text">
             Examples:
             <ul>
-                <li>Single IP → **auto-generated** host name (e.g., H_192.168.1.10)</li>
-                <li>'name**,**IP' → explicit host definition **using a comma delimiter**</li>
+                <li>Single IP → auto-generated host name (e.g., H_192.168.1.10)</li>
+                <li>'name,IP' → explicit host definition using a comma delimiter</li>
             </ul>
         </div>
     </div>
