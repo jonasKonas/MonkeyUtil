@@ -97,52 +97,63 @@ WEAK_PROTOCOLS = ["HTTP", "FTP", "TELNET", "RDP", "POP3", "IMAP"]
 def classify_rules(df):
     """
     Classifies rules into one or more categories:
+    - Section Header (NEW)
     - Disabled (Type contains "[Disabled]")
     - Zero Hits
     - Any in Source/Destination
     - Weak Protocol
-    Adds a new column 'Categories' (list of tags).
+    Adds a new column 'Categories' (list of tags) and 'is_section' flag.
     """
     results = []
+    
+    # Assuming WEAK_PROTOCOLS is defined globally or passed in
+    global WEAK_PROTOCOLS # If defined outside the function
+
     for _, row in df.iterrows():
         rule = row.to_dict()  # keep all original columns
         categories = []
-        # Section check
-if str(row.get("Type", "")).strip().lower() == "section":
-        rule['is_section'] = True
-        categories.append("Section Header")
-        
-        # 💡 FIX: Explicitly get the section name from the 'Name' column, 
-        # or use a fallback if that column is unexpectedly blank (NaN).
-        section_display_name = str(row.get("Name", "")).strip()
-        
-        if not section_display_name or section_display_name.lower() == 'nan':
-             # If 'Name' is blank or NaN, use the 'Type' and 'Source' as a fallback
-             section_display_name = f"SECTION: {row.get('Source', 'Unnamed Section')}"
-        
-        # Add a new key for the HTML to use directly, ensuring it's not 'nan'
-        rule['SectionDisplayName'] = section_display_name.upper()
 
-        # Fill other keys with empty string to prevent NaNs in the final data
-        for key in rule.keys():
-             if key not in ['Name', 'Type', 'is_section', 'SectionDisplayName'] and (pd.isna(rule.get(key)) or rule.get(key) is None):
-                 rule[key] = '' 
+        # 1. SECTION CHECK (Must be inside the for loop)
+        if str(row.get("Type", "")).strip().lower() == "section":
+            rule['is_section'] = True
+            categories.append("Section Header")
+            
+            # FIX: Safely retrieve Section Name
+            section_display_name = str(row.get("Name", "")).strip()
+            
+            if not section_display_name or section_display_name.lower() == 'nan':
+                 # Fallback to Source column if Name is blank/NaN (common CP export issue)
+                 section_display_name = f"SECTION: {row.get('Source', 'Unnamed Section')}"
+            
+            # Use a guaranteed key for HTML display
+            rule['SectionDisplayName'] = section_display_name.upper()
+
+            # Fill other keys with empty string to prevent NaNs in the final data
+            for key in rule.keys():
+                # Check for NaN/None and that it's not one of our new keys
+                if key not in ['Name', 'Type', 'is_section', 'SectionDisplayName'] and (pd.isna(rule.get(key)) or rule.get(key) is None):
+                    rule[key] = ''
+            
+            rule["Categories"] = ", ".join(categories)
+            results.append(rule)
+            continue  # Move to the next row in the loop (correct use)
         
-        # ... rest of the section logic
-        rule["Categories"] = ", ".join(categories)
-        results.append(rule)
-        continue  # Skip all other checks for a section
-    else:
-            rule['is_section'] = False # Tag normal rules explicitly
+        # 2. REGULAR RULE LOGIC (Only runs if the row is NOT a section)
+        
+        rule['is_section'] = False # Tag normal rules explicitly
+
         # Disabled check
         if "[disabled]" in str(row.get("Type", "")).lower():
             categories.append("Disabled")
+            
         # Zero Hits check
         if str(row.get("Hits", "")).strip().lower() == "zero":
             categories.append("Zero Hits")
+            
         # Any in Source or Destination
         if str(row.get("Source", "")).strip().lower() == "any" or str(row.get("Destination", "")).strip().lower() == "any":
             categories.append("Any in Source/Destination")
+            
         # Weak Protocols (split by ;)
         services = str(row.get("Services & Applications", ""))
         service_tokens = [s.strip().lower() for s in services.split(";")]
@@ -150,17 +161,16 @@ if str(row.get("Type", "")).strip().lower() == "section":
             if proto.lower() in service_tokens:
                 categories.append("Weak Protocol")
                 break
+                
         # If nothing matched → Normal
         if not categories:
             categories = ["Normal"]
+            
         # Store as comma-separated string for HTML/CSV
         rule["Categories"] = ", ".join(categories)
         results.append(rule)
+
     return results
-    
-#DOWNLOAD_FUNCTION_FOR_POLICY_REVIEW
-# Global store for download
-classified_rules = None
 
 @app.route("/checkpoint/policy_review", methods=["GET", "POST"])
 def policy_review():
