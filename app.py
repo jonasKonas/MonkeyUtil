@@ -108,13 +108,31 @@ def classify_rules(df):
         rule = row.to_dict()  # keep all original columns
         categories = []
         # Section check
-        if str(row.get("Type", "")).strip().lower() == "section":
-            rule['is_section'] = True
-            categories.append("Section Header") # Tag it for display
-            rule["Categories"] = ", ".join(categories)
-            results.append(rule)
-            continue  # Skips all the other checks if this is section, not a rule. Faster?
-        else:
+if str(row.get("Type", "")).strip().lower() == "section":
+        rule['is_section'] = True
+        categories.append("Section Header")
+        
+        # 💡 FIX: Explicitly get the section name from the 'Name' column, 
+        # or use a fallback if that column is unexpectedly blank (NaN).
+        section_display_name = str(row.get("Name", "")).strip()
+        
+        if not section_display_name or section_display_name.lower() == 'nan':
+             # If 'Name' is blank or NaN, use the 'Type' and 'Source' as a fallback
+             section_display_name = f"SECTION: {row.get('Source', 'Unnamed Section')}"
+        
+        # Add a new key for the HTML to use directly, ensuring it's not 'nan'
+        rule['SectionDisplayName'] = section_display_name.upper()
+
+        # Fill other keys with empty string to prevent NaNs in the final data
+        for key in rule.keys():
+             if key not in ['Name', 'Type', 'is_section', 'SectionDisplayName'] and (pd.isna(rule.get(key)) or rule.get(key) is None):
+                 rule[key] = '' 
+        
+        # ... rest of the section logic
+        rule["Categories"] = ", ".join(categories)
+        results.append(rule)
+        continue  # Skip all other checks for a section
+    else:
             rule['is_section'] = False # Tag normal rules explicitly
         # Disabled check
         if "[disabled]" in str(row.get("Type", "")).lower():
