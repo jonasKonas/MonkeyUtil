@@ -104,23 +104,27 @@ def classify_rules(df):
     Adds a new column 'Categories' (list of tags).
     """
     results = []
-
     for _, row in df.iterrows():
         rule = row.to_dict()  # keep all original columns
         categories = []
-
+        # Section check
+        if str(row.get("Type", "")).strip().lower() == "section":
+            rule['is_section'] = True
+            categories.append("Section Header") # Tag it for display
+            rule["Categories"] = ", ".join(categories)
+            results.append(rule)
+            continue  # Skips all the other checks if this is section, not a rule. Faster?
+        else:
+            rule['is_section'] = False # Tag normal rules explicitly
         # Disabled check
         if "[disabled]" in str(row.get("Type", "")).lower():
             categories.append("Disabled")
-
         # Zero Hits check
         if str(row.get("Hits", "")).strip().lower() == "zero":
             categories.append("Zero Hits")
-
         # Any in Source or Destination
         if str(row.get("Source", "")).strip().lower() == "any" or str(row.get("Destination", "")).strip().lower() == "any":
             categories.append("Any in Source/Destination")
-
         # Weak Protocols (split by ;)
         services = str(row.get("Services & Applications", ""))
         service_tokens = [s.strip().lower() for s in services.split(";")]
@@ -128,21 +132,14 @@ def classify_rules(df):
             if proto.lower() in service_tokens:
                 categories.append("Weak Protocol")
                 break
-
-
         # If nothing matched → Normal
         if not categories:
             categories = ["Normal"]
-
         # Store as comma-separated string for HTML/CSV
         rule["Categories"] = ", ".join(categories)
         results.append(rule)
-
     return results
-
-
-
-
+    
 #DOWNLOAD_FUNCTION_FOR_POLICY_REVIEW
 # Global store for download
 classified_rules = None
