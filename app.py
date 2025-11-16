@@ -178,6 +178,9 @@ def policy_review():
     global classified_rules
     classified_rules = None
     results = None
+    
+    # 💡 FIX: Initialize the variable that will be passed to the template
+    results_for_html = None 
 
     if request.method == "POST":
         file = request.files.get("csv_file")
@@ -189,16 +192,16 @@ def policy_review():
             results = classify_rules(df)
             classified_rules = results  # store for download
             
-            # 💡 NEW STEP: Remove 'is_section' from the dictionaries for HTML display
             # Create a new list where each rule dictionary has 'is_section' removed
             results_for_html = []
             for rule in results:
                 # Create a copy and remove the key if it exists
                 temp_rule = rule.copy()
                 temp_rule.pop('is_section', None) 
+                temp_rule.pop('SectionDisplayName', None) 
                 results_for_html.append(temp_rule)
             
-    # Pass the cleaned list to the template
+    # Pass the list (which is [] or None on GET, and contains data on POST) to the template
     return render_template("/checkpoint/policy_review.html", rules=results_for_html)
 
 #Download reviewed rules
@@ -208,12 +211,21 @@ def download_policy():
     if not classified_rules:
         return "No classified rules to download.", 400
 
-    # Convert list of dicts to DataFrame
-    df = pd.DataFrame(classified_rules)
+    # 💡 FIX: Clean the data *before* converting to DataFrame (essential for download)
+    cleaned_for_download = []
+    for rule in classified_rules:
+        temp_rule = rule.copy()
+        
+        # Remove the internal display flag
+        temp_rule.pop('is_section', None) 
+        
+        # REMOVE THE COLUMN FROM THE CSV OUTPUT
+        temp_rule.pop('SectionDisplayName', None)
+        
+        cleaned_for_download.append(temp_rule)
 
-    # 💡 NEW: Drop the internal 'is_section' column before saving to CSV
-    if 'is_section' in df.columns:
-        df = df.drop(columns=['is_section'])
+    # Convert the cleaned list of dicts to DataFrame
+    df = pd.DataFrame(cleaned_for_download)
 
     # Create in-memory CSV
     output = io.BytesIO()

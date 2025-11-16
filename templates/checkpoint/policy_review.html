@@ -24,80 +24,88 @@
 
         <div class="table-responsive" style="max-width: 100%;">
             <table class="table table-striped table-bordered mt-3 table-sm w-100">
-                <thead class="table-dark">
-                    <tr>
-                        {% for col in rules[0].keys() %}
-                            <th style="white-space: nowrap; width: {{ '15%' if loop.length > 5 else 'auto' }};">{{ col }}</th>
-                        {% endfor %}
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for rule in rules %}
-                    
-                    {# 1. Check for the 'is_section' flag added in app.py #}
-                    <tr 
-                        {% if rule.is_section %}
-                            class="table-info fw-bold fs-5" {# Bootstrap classes for a bold, blue section header #}
-                        {% elif "Disabled" in rule.Categories %}
-                            class="table-secondary"
-                        {% elif "Weak Protocol" in rule.Categories or "Zero Hits" in rule.Categories %}
-                            class="table-danger"
-                        {% elif "Any in Source/Destination" in rule.Categories %}
-                            class="table-warning"
-                        {% endif %}
-                    >
+<thead class="table-dark">
+    <tr>
+        {# Get keys from the first rule to calculate column count #}
+        {% set headers = rules[0].keys() if rules else [] %}
+        {% set visible_cols_count = 0 %}
+        
+        {% for col in headers %}
+            {# 💡 FIX: Only render headers for columns that are NOT internal flags #}
+            {% if col != 'is_section' and col != 'SectionDisplayName' %}
+                <th style="white-space: nowrap; width: {{ '15%' if loop.length > 5 else 'auto' }};">{{ col }}</th>
+                {% set visible_cols_count = visible_cols_count + 1 %}
+            {% endif %}
+        {% endfor %}
+        
+        {# Store the final visible count for use in the section colspan below #}
+        {% set rules_col_count = visible_cols_count %} 
+    </tr>
+</thead>
+<tbody>
+    {% for rule in rules %}
+    
+    {# Determine row class based on categories #}
+    <tr 
+        {% if rule.is_section %}
+            class="table-info fw-bold fs-5" 
+        {% elif "Disabled" in rule.Categories %}
+            class="table-secondary"
+        {% elif "Weak Protocol" in rule.Categories or "Zero Hits" in rule.Categories %}
+            class="table-danger"
+        {% elif "Any in Source/Destination" in rule.Categories %}
+            class="table-warning"
+        {% endif %}
+    >
+        
+        {# SECTION ROW: Span the whole table width #}
+        {% if rule.is_section %}
+            {# 💡 FIX 2: Use the calculated column count (rules_col_count) for colspan #}
+            <td colspan="{{ rules_col_count }}" class="text-center p-3">
+                <span class="text-uppercase">{{ rule.SectionDisplayName }}</span>
+            </td>
+            
+        {# REGULAR RULE ROW: Iterate through the rule's data #}
+        {% else %}
+            {% for key, value in rule.items() %}
+                
+                {# 💡 FIX 3: Skip internal keys in the cell loop as well #}
+                {% if key != 'is_section' and key != 'SectionDisplayName' %}
+                
+                    <td style="overflow-wrap: anywhere; max-width: 200px;">
                         
-                        {% if rule.is_section %}
-                                {# 2. If it's a section, use a single cell spanning all columns #}
-                                <td colspan="{{ rules[0]|length }}" class="text-center p-3">
-                                    <span class="text-uppercase">{{ rule.SectionDisplayName }}</span>  <-- ✅ FIXED
-                                </td>
-                        {% else %}
-                            {# 3. If it's a regular rule, iterate through all columns normally #}
-                            {% for key, value in rule.items() %}
-                                <td style="overflow-wrap: anywhere; max-width: 200px;">
-                                    {% if key == "Categories" %}
-                                        {# Your existing Categories badge logic #}
-                                        {% for cat in value.split(",") %}
-                                            {% set cat = cat.strip() %}
-                                            {% if cat == "Zero Hits" or cat == "Weak Protocol" %}
-                                                <span class="badge bg-danger">{{ cat }}</span>
-                                            {% elif cat == "Any in Source/Destination" %}
-                                                <span class="badge bg-warning text-dark">{{ cat }}</span>
-                                            {% elif cat == "Disabled" %}
-                                                <span class="badge bg-secondary">{{ cat }}</span>
-                                            {% elif cat == "Normal" %}
-                                                <span class="badge bg-success">{{ cat }}</span>
-                                            {% else %}
-                                                {# Handle any other unexpected categories #}
-                                                <span class="badge bg-info">{{ cat }}</span>
-                                            {% endif %}
-                                        {% endfor %}
-                                    {% else %}
-                                        {# 3. If it's a regular rule, iterate through all columns normally #}
-                                        {% for key, value in rule.items() %}
-                                            <td style="overflow-wrap: anywhere; max-width: 200px;">
-                                                {% if key == "Categories" %}
-                                                    {# ... badge logic ... #}
-                                                {% elif key == "is_section" %}
-                                                    {# Do nothing, skip displaying the is_section column #}
-                                                {% else %}
-                                                    {# Display all other column values #}
-                                                    {{ value }}
-                                                {% endif %}
-                                            </td>
-                                        {% endfor %}
-                                    {% endif %}
-                                    {% else %}
-                                        {# Display all other column values #}
-                                        {{ value }}
-                                    {% endif %}
-                                </td>
+                        {# Display Categories as Badges #}
+                        {% if key == "Categories" %}
+                            {# ... Badge logic remains the same ... #}
+                            {% for cat in value.split(",") %}
+                                {% set cat = cat.strip() %}
+                                
+                                {% if cat == "Zero Hits" or cat == "Weak Protocol" %}
+                                    <span class="badge bg-danger">{{ cat }}</span>
+                                {% elif cat == "Any in Source/Destination" %}
+                                    <span class="badge bg-warning text-dark">{{ cat }}</span>
+                                {% elif cat == "Disabled" %}
+                                    <span class="badge bg-secondary">{{ cat }}</span>
+                                {% elif cat == "Normal" %}
+                                    <span class="badge bg-success">{{ cat }}</span>
+                                {% else %}
+                                    <span class="badge bg-info">{{ cat }}</span>
+                                {% endif %}
                             {% endfor %}
+                            
+                        {# Display all other column values #}
+                        {% else %}
+                            {{ value }}
                         {% endif %}
-                    </tr>
-                    {% endfor %}
-                </tbody>
+                        
+                    </td>
+                    
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    </tr>
+    {% endfor %}
+</tbody>
             </table>
         </div>
 
