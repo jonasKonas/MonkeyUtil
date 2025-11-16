@@ -144,6 +144,7 @@ def classify_rules(df):
 # Global store for download
 classified_rules = None
 
+# Updated policy_review route
 @app.route("/checkpoint/policy_review", methods=["GET", "POST"])
 def policy_review():
     global classified_rules
@@ -154,10 +155,23 @@ def policy_review():
         file = request.files.get("csv_file")
         if file and file.filename.endswith(".csv"):
             df = pd.read_csv(file)
+            df = df.fillna("")  # Replace NaN with empty strings
+            
+            # --- The classification happens here ---
             results = classify_rules(df)
             classified_rules = results  # store for download
-
-    return render_template("/checkpoint/policy_review.html", rules=results)
+            
+            # 💡 NEW STEP: Remove 'is_section' from the dictionaries for HTML display
+            # Create a new list where each rule dictionary has 'is_section' removed
+            results_for_html = []
+            for rule in results:
+                # Create a copy and remove the key if it exists
+                temp_rule = rule.copy()
+                temp_rule.pop('is_section', None) 
+                results_for_html.append(temp_rule)
+            
+    # Pass the cleaned list to the template
+    return render_template("/checkpoint/policy_review.html", rules=results_for_html)
 
 #Download reviewed rules
 @app.route("/download_policy", methods=["POST"])
@@ -168,6 +182,10 @@ def download_policy():
 
     # Convert list of dicts to DataFrame
     df = pd.DataFrame(classified_rules)
+
+    # 💡 NEW: Drop the internal 'is_section' column before saving to CSV
+    if 'is_section' in df.columns:
+        df = df.drop(columns=['is_section'])
 
     # Create in-memory CSV
     output = io.BytesIO()
