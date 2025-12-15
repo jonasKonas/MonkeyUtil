@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Add Host Objects (IP Addresses)</h2>
+<form method="post" class="mb-4">
+    <div class="mb-3">
+        <label for="ticket_ref" class="form-label">Ticket Ref</label>
+        <input type="text" class="form-control" id="ticket_ref" name="ticket_ref" required>
+    </div>
+
+    <div class="mb-3">
+        <label for="group_name" class="form-label">Group Name</label>
+        <input type="text" class="form-control" id="group_name" name="group_name" required>
+    </div>
+
+    <div class="mb-3">
+        <label for="input_data" class="form-label">
+            Input Data (IP per line, or name,IP per line)
+        </label>
+        <textarea class="form-control" id="input_data" name="input_data" required
+            placeholder="192.168.1.10/24 or webserver1,10.0.0.5/24"></textarea>
+        <div class="form-text">
+            Examples:
+            <ul>
+                <li>Single IP → auto-generated host name (e.g., H_192.168.1.10)</li>
+                <li>'name,IP' → explicit host definition using a comma delimiter</li>
+            </ul>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Generate</button>
+</form>
+
+{% if output %}
+    <h3>Generated API Commands</h3>
+    <button class="btn btn-success mb-2" onclick="copyToClipboard()">Copy to Clipboard</button>
+    <pre id="output">{{ output }}</pre>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyToClipboard() {
+    var copyText = document.getElementById("output");
+    navigator.clipboard.writeText(copyText.textContent);
+    alert("Copied to clipboard!");
+}
+</script>
+{% endblock %}

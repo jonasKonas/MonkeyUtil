@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, send_file, redirect, url_for
 from datetime import datetime
 import pandas as pd
 import io
+import ipaddress
 
 
 
@@ -9,19 +10,163 @@ app = Flask(__name__)
 
 
 
-#LANDING PAGE
+######## LANDING PAGE ######## 
+# In your Flask application's index route:
 @app.route('/')
 def index():
-    return render_template('index.html', current_year=datetime.now().year)
+    # --- Check Point Tools Data ---
+    checkpoint_tools = [
+        {
+            'title': 'Add Host Objects',
+            'desc': 'Generate API commands for adding new IP-based Host objects to groups. Input: IP or Name,IP (comma-separated).',
+            # NOTE: url_for() uses the Python function name
+            'url': url_for('add_host_api'), 
+            'status': 'primary',
+            'note': ''
+        },
+        {
+            'title': 'Add Network Objects',
+            'desc': 'Generate API commands for adding new network objects to groups. Input: Subnet or Name,Subnet (comma-separated).',
+            # This is the previously corrected endpoint name
+            'url': url_for('add_networks_api'),
+            'status': 'primary',
+            'note': ''
+        },
+        {
+            'title': 'Add DNS Domain Objects',
+            'desc': "Generate API commands for adding new DNS Domain objects (must start with '.') to groups.",
+            'url': url_for('add_dns_domain_api'),
+            'status': 'primary',
+            'note': ''
+        },
+        {
+            'title': 'Policy Review',
+            'desc': 'Review your Check Point Policy by uploading CSV file from SmartConsole.',
+            'url': url_for('policy_review'),
+            'status': 'primary',
+            'note': '- TESTING'
+        },
+    ]
 
-#ABOUT PAGE
+    # --- Other Vendor Tools Data ---
+    other_tools = [
+        {
+            'title': 'Palo Alto Tool',
+            'desc': 'Tools for managing Palo Alto firewall configurations and objects.',
+            'url': '#',
+            'status': 'secondary',
+            'disabled': True,
+            'note': '(Coming Soon)'
+        }
+    ]
+    
+    return render_template('index.html', checkpoint_tools=checkpoint_tools, other_tools=other_tools)
+
+######## ABOUT PAGE ######## 
 @app.route('/about')
 def about():
     return render_template('about.html', current_year=datetime.now().year)
 
+#### Change CIDR Notation Function ####
+def convert_cidr_to_network_and_mask(cidr_input):
+    """
+    Converts a CIDR string (e.g., '192.168.22.0/24') into
+    the network address and the subnet mask.
+    """
+    try:
+        # Create a Python IPv4 Network object
+        network_obj = ipaddress.IPv4Network(cidr_input, strict=False) 
+        
+        # network_address is the base address of the subnet (e.g., 192.168.22.0)
+        network_address = str(network_obj.network_address)
+        
+        # netmask is the subnet mask (e.g., 255.255.255.0)
+        subnet_mask = str(network_obj.netmask)
+        
+        return network_address, subnet_mask
+    except ValueError:
+        # Return None, None if the input is not a valid network/CIDR
+        return None, None
 
 
-# Route for adding Host Objects
+######## ADD NETWORKS TOOL ######## 
+def generate_commands(command_type, ticket_ref, group_name, input_data):
+    """
+    Generates API commands based on input data and command type.
+    Now supports splitting CIDR for Check Point Network objects.
+    """
+    output = ""
+    lines = input_data.strip().split('\n')
+    
+    # Define the template for the command based on the type
+    if command_type == 'host':
+        # Host remains the same
+        command_prefix = 'add host name "{name}" ip-address "{value}"'
+        network_flag = False
+    elif command_type == 'network':
+        # Network now uses placeholders for both subnet and mask
+        command_prefix = 'add network name "{name}" subnet "{subnet}" subnet-mask "{mask}"'
+        network_flag = True
+    else:
+        return "# Error: Invalid command type."
+
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        parts = [p.strip() for p in line.split(',')]
+        
+        # Determine Name and Value (IP/CIDR)
+        if len(parts) == 2:
+            name, value = parts
+        elif len(parts) == 1:
+            value = parts[0]
+            # Use auto-generated name for single value input
+            name = f'N_{value}' if network_flag else f'H_{value}'
+        else:
+            output += f"# Skipping invalid line: {line}\n"
+            continue # Skip to the next line
+
+        # --- NETWORK COMMAND GENERATION LOGIC ---
+        if network_flag:
+            subnet, mask = convert_cidr_to_network_and_mask(value)
+            
+            if subnet is None:
+                output += f"# Skipping invalid network/CIDR format: {value}\n"
+                continue
+
+            # Format the final network command
+            output += f'{command_prefix.format(name=name, subnet=subnet, mask=mask)} comments "Ref:{ticket_ref}" groups.1 "{group_name}"\n'
+
+        # --- HOST COMMAND GENERATION LOGIC ---
+        else:
+            # Check for domain-like input (only relevant for the original host logic)
+            if value.startswith('.'):
+                 output += f"# Skipping domain-like input: {value} (Use DNS Domain Tool)\n"
+                 continue
+                 
+            # Format the final host command
+            output += f'{command_prefix.format(name=name, value=value)} comments "Ref:{ticket_ref}" groups.1 "{group_name}"\n'
+            
+    return output
+
+# --- FLASK ROUTE FUNCTIONS ---
+
+@app.route('/checkpoint/add_networks_api', methods=['GET', 'POST'])
+def add_networks_api():
+    output = ""
+    if request.method == 'POST':
+        ticket_ref = request.form.get('ticket_ref', '')
+        group_name = request.form.get('group_name', '')
+        input_data = request.form.get('input_data', '')
+
+        # Call the centralized helper function for 'network'
+        output = generate_commands('network', ticket_ref, group_name, input_data)
+        
+    return render_template('/checkpoint/add_network_api.html', output=output)
+
+
 @app.route('/checkpoint/add_host_api', methods=['GET', 'POST'])
 def add_host_api():
     output = ""
@@ -30,37 +175,13 @@ def add_host_api():
         group_name = request.form.get('group_name', '')
         input_data = request.form.get('input_data', '')
 
-        lines = input_data.strip().split('\n')
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue  # skip empty lines
-            
-            # *** KEY CHANGE: Split by comma (',') instead of space ***
-            parts = [p.strip() for p in line.split(',')]
-
-            # Host with Name and IP (now separated by a comma)
-            if len(parts) == 2:
-                name, ip = parts
-                output += f'add host name "{name}" ip-address "{ip}" comments "Ref:{ticket_ref}" groups.1 "{group_name}"\n'
-
-            # Single value: IP only
-            elif len(parts) == 1:
-                value = parts[0]
-                # Skip if it looks like a domain (starts with .)
-                if value.startswith('.'):
-                    output += f"# Skipping domain-like input: {value} (Use DNS Domain Tool)\n"
-                else:
-                    # Treat as IP and auto-generate host name
-                    name = f'H_{value}'
-                    output += f'add host name "{name}" ip-address "{value}" comments "Ref:{ticket_ref}" groups.1 "{group_name}"\n'
-
-            else:
-                output += f"# Skipping invalid line: {line}\n"
-
+        # Call the centralized helper function for 'host'
+        output = generate_commands('host', ticket_ref, group_name, input_data)
+        
     return render_template('/checkpoint/add_host_api.html', output=output)
 
-# New route for adding DNS Domain Objects
+
+########  New route for adding DNS Domain Objects ######## 
 @app.route('/checkpoint/add_dns_domain_api', methods=['GET', 'POST'])
 def add_dns_domain_api():
     output = ""

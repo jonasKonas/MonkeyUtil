@@ -10,53 +10,49 @@
             <hr>
             <div class="row row-cols-1 row-cols-md-3 g-4">
                 
+                {# Loop through the list of Check Point tools passed from Flask #}
+                {% for tool in checkpoint_tools %}
                 <div class="col">
-                    <div class="card h-100 border-primary">
+                    <div class="card h-100 border-{{ tool.status }}">
                         <div class="card-body text-center">
-                            <h5 class="card-title">Add Host Objects</h5>
-                            <p class="card-text">Generate API commands for adding new IP-based Host objects to groups.</p>
-                            <a href="{{ url_for('add_host_api') }}" class="btn btn-primary">Go</a>
+                            <h5 class="card-title">{{ tool.title }}</h5>
+                            <p class="card-text">{{ tool.desc }}</p>
+                            
+                            <a href="{{ tool.url }}" 
+                               class="btn btn-{{ tool.status }}"
+                               {% if tool.disabled %}disabled{% endif %}
+                            >
+                                Go
+                                {% if tool.note %}{{ tool.note }}{% endif %}
+                            </a>
                         </div>
                     </div>
                 </div>
-
-                <div class="col">
-                    <div class="card h-100 border-primary">
-                        <div class="card-body text-center">
-                            <h5 class="card-title">Add DNS Domain Objects</h5>
-                            <p class="card-text">Generate API commands for adding new DNS Domain objects (must start with '.') to groups.</p>
-                            <a href="{{ url_for('add_dns_domain_api') }}" class="btn btn-primary">Go</a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col">
-                    <div class="card h-100 border-primary">
-                        <div class="card-body text-center">
-                            <h5 class="card-title">Policy Review - TESTING</h5>
-                            <p class="card-text">Review your Check Point Policy by uploading CSV file from SmartConsole</p>
-                            <a href="{{ url_for('policy_review') }}" class="btn btn-primary">Go</a>
-                        </div>
-                    </div>
-                </div>
-                
+                {% endfor %}
             </div>
             
             <h3 class="mb-4 mt-5">Other Vendor Tools</h3>
             <hr>
             <div class="row row-cols-1 row-cols-md-3 g-4">
-
+                
+                {# Loop through the list of Other Vendor tools #}
+                {% for tool in other_tools %}
                 <div class="col">
-                    <div class="card h-100 border-secondary">
+                    <div class="card h-100 border-{{ tool.status }}">
                         <div class="card-body text-center">
-                            <h5 class="card-title">Palo Alto Tool (Coming Soon)</h5>
-                            <p class="card-text">Tools for managing Palo Alto firewall configurations and objects.</p>
-                            <a href="#" class="btn btn-secondary disabled">Disabled</a>
+                            <h5 class="card-title">{{ tool.title }} {{ tool.note }}</h5>
+                            <p class="card-text">{{ tool.desc }}</p>
+                            
+                            <a href="{{ tool.url }}" 
+                               class="btn btn-{{ tool.status }} {% if tool.disabled %}disabled{% endif %}"
+                            >
+                                {% if tool.disabled %}Disabled{% else %}Go{% endif %}
+                            </a>
                         </div>
                     </div>
                 </div>
-                
-                </div>
+                {% endfor %}
+            </div>
             
         </div>
     </div>
